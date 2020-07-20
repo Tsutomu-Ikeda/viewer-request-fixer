@@ -1,0 +1,49 @@
+service: viewer-request-fixer # NOTE: update this with your service name
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  profile: ikeda # AWS profileここで指定しちゃってるけど、ほんとはコマンドから指定した方が良い
+  region: us-east-1
+  role: LambdaEdgeRole
+
+functions:
+  vrFixer:
+    handler: index.handler
+    memorySize: 128
+    timeout: 1
+
+resources:
+  Resources:
+    LambdaEdgeRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+                  - edgelambda.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: ${opt:stage}-serverless-lambdaedge
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - logs:DescribeLogStreams
+                  Resource: "arn:aws:logs:*:*:*"
+                - Effect: "Allow"
+                  Action:
+                    - "s3:PutObject"
+                  Resource:
+                    Fn::Join:
+                      - ""
+                      - - "arn:aws:s3:::"
+                        - "Ref": "ServerlessDeploymentBucket"
